@@ -34,9 +34,9 @@ body {
 
 .panel {
   width: min(100%, 480px);
-  padding: 28px;
+  padding: 22px;
   border: 1px solid var(--line);
-  border-radius: 28px;
+  border-radius: 24px;
   background: var(--panel);
   backdrop-filter: blur(12px);
   box-shadow: var(--shadow);
@@ -53,8 +53,8 @@ body {
 }
 
 h1 {
-  margin: 8px 0 24px;
-  font-size: clamp(2.25rem, 6vw, 3.5rem);
+  margin: 6px 0 18px;
+  font-size: clamp(2rem, 5.4vw, 3rem);
   line-height: 0.95;
 }
 
@@ -63,7 +63,7 @@ h1 {
   display: grid;
   place-items: center;
   aspect-ratio: 1;
-  margin-bottom: 24px;
+  margin-bottom: 18px;
   border-radius: 50%;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.55);
@@ -123,7 +123,7 @@ h1 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 .timers > div,
@@ -135,21 +135,21 @@ h1 {
 }
 
 .timers > div {
-  padding: 14px;
+  padding: 12px;
 }
 
 .timer-value {
   display: block;
-  margin-top: 6px;
-  font-size: 1.4rem;
+  margin-top: 4px;
+  font-size: 1.2rem;
   font-variant-numeric: tabular-nums;
 }
 
 .field {
   display: grid;
-  gap: 10px;
-  padding: 14px;
-  margin-bottom: 20px;
+  gap: 8px;
+  padding: 12px;
+  margin-bottom: 14px;
 }
 
 select,
@@ -159,11 +159,21 @@ button {
 
 select {
   width: 100%;
-  padding: 10px 12px;
+  padding: 9px 12px;
   border: 1px solid var(--line);
   border-radius: 12px;
   color: var(--text);
   background: white;
+}
+
+input[type="range"] {
+  width: 100%;
+}
+
+.mix-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .controls {
@@ -176,7 +186,7 @@ select {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  margin-top: 18px;
+  margin-top: 14px;
   color: var(--muted);
 }
 
@@ -186,7 +196,7 @@ select {
 }
 
 button {
-  padding: 14px 12px;
+  padding: 12px 12px;
   cursor: pointer;
   color: var(--text);
 }
@@ -207,6 +217,7 @@ button:hover {
   }
 
   .timers,
+  .mix-grid,
   .controls {
     grid-template-columns: 1fr;
   }

@@ -10,6 +10,8 @@ const phaseRemaining = document.getElementById("phaseRemaining");
 const sessionRemaining = document.getElementById("sessionRemaining");
 const sessionMinutes = document.getElementById("sessionMinutes");
 const ambientSound = document.getElementById("ambientSound");
+const voiceVolume = document.getElementById("voiceVolume");
+const ambientVolume = document.getElementById("ambientVolume");
 const startButton = document.getElementById("startButton");
 const pauseButton = document.getElementById("pauseButton");
 const resetButton = document.getElementById("resetButton");
@@ -28,6 +30,8 @@ let ambientContext = null;
 let ambientNodes = [];
 let ambientIntervals = [];
 let currentAmbient = "none";
+let ambientMasterGain = null;
+const speechWarmupPhrases = ["In", "Hold", "Out", "2", "3", "4", "5", "6", "7", "8"];
 
 function getAmbientContext() {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -37,6 +41,9 @@ function getAmbientContext() {
 
   if (!ambientContext) {
     ambientContext = new AudioContextClass();
+    ambientMasterGain = ambientContext.createGain();
+    ambientMasterGain.gain.value = Number(ambientVolume.value) / 100;
+    ambientMasterGain.connect(ambientContext.destination);
   }
 
   return ambientContext;
@@ -92,7 +99,7 @@ function addWaveAmbient(context) {
 
   source.connect(lowpass);
   lowpass.connect(gainNode);
-  gainNode.connect(context.destination);
+  gainNode.connect(ambientMasterGain);
 
   source.start();
   lfo.start();
@@ -113,28 +120,45 @@ function addRainAmbient(context) {
 
   source.connect(highpass);
   highpass.connect(gainNode);
-  gainNode.connect(context.destination);
+  gainNode.connect(ambientMasterGain);
   source.start();
   ambientNodes.push(source, highpass, gainNode);
 }
 
 function addNightAmbient(context) {
-  addRainAmbient(context);
+  const drone = context.createOscillator();
+  const droneGain = context.createGain();
+  const tremolo = context.createOscillator();
+  const tremoloGain = context.createGain();
+
+  drone.type = "triangle";
+  drone.frequency.value = 110;
+  droneGain.gain.value = 0.012;
+  tremolo.frequency.value = 0.08;
+  tremoloGain.gain.value = 0.008;
+  tremolo.connect(tremoloGain);
+  tremoloGain.connect(droneGain.gain);
+  drone.connect(droneGain);
+  droneGain.connect(ambientMasterGain);
+  drone.start();
+  tremolo.start();
+  ambientNodes.push(drone, droneGain, tremolo, tremoloGain);
 
   const chirpInterval = window.setInterval(() => {
     const oscillator = context.createOscillator();
     const gainNode = context.createGain();
-    oscillator.type = "triangle";
-    oscillator.frequency.setValueAtTime(1200 + Math.random() * 900, context.currentTime);
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(420 + Math.random() * 120, context.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(600 + Math.random() * 100, context.currentTime + 0.28);
     gainNode.gain.setValueAtTime(0.0001, context.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.015, context.currentTime + 0.02);
-    gainNode.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.18);
+    gainNode.gain.exponentialRampToValueAtTime(0.012, context.currentTime + 0.04);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.42);
     oscillator.connect(gainNode);
-    gainNode.connect(context.destination);
+    gainNode.connect(ambientMasterGain);
     oscillator.start();
-    oscillator.stop(context.currentTime + 0.2);
+    oscillator.stop(context.currentTime + 0.45);
     ambientNodes.push(oscillator, gainNode);
-  }, 2400);
+  }, 5200);
 
   ambientIntervals.push(chirpInterval);
 }
@@ -146,7 +170,7 @@ function addForestAmbient(context) {
   drone.frequency.value = 220;
   droneGain.gain.value = 0.008;
   drone.connect(droneGain);
-  droneGain.connect(context.destination);
+  droneGain.connect(ambientMasterGain);
   drone.start();
   ambientNodes.push(drone, droneGain);
 
@@ -160,7 +184,7 @@ function addForestAmbient(context) {
     gainNode.gain.exponentialRampToValueAtTime(0.018, context.currentTime + 0.03);
     gainNode.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.22);
     oscillator.connect(gainNode);
-    gainNode.connect(context.destination);
+    gainNode.connect(ambientMasterGain);
     oscillator.start();
     oscillator.stop(context.currentTime + 0.25);
     ambientNodes.push(oscillator, gainNode);
@@ -225,7 +249,7 @@ function playFallbackTone(phase) {
   oscillator.type = "sine";
   oscillator.frequency.setValueAtTime(frequencyByState[phase.state], now);
   gainNode.gain.setValueAtTime(0.0001, now);
-  gainNode.gain.exponentialRampToValueAtTime(0.12, now + 0.02);
+  gainNode.gain.exponentialRampToValueAtTime((Number(voiceVolume.value) / 100) * 0.12, now + 0.02);
   gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
 
   oscillator.connect(gainNode);
@@ -257,13 +281,27 @@ async function fetchSpeech(text) {
   return audioUrl;
 }
 
+function getPhaseCountCue(phase) {
+  const elapsedSeconds = phase.duration - phaseSecondsLeft;
+  if (elapsedSeconds <= 0) {
+    return phase.label;
+  }
+
+  return String(elapsedSeconds + 1);
+}
+
+function warmSpeechCache() {
+  Promise.allSettled(speechWarmupPhrases.map((phrase) => fetchSpeech(phrase)));
+}
+
 async function speakPhase(phase) {
   if (!soundEnabled.checked) {
     return;
   }
 
   try {
-    const audioUrl = await fetchSpeech(phase.label);
+    const cue = getPhaseCountCue(phase);
+    const audioUrl = await fetchSpeech(cue);
 
     if (activeAudio) {
       activeAudio.pause();
@@ -271,6 +309,7 @@ async function speakPhase(phase) {
     }
 
     activeAudio = new Audio(audioUrl);
+    activeAudio.volume = Number(voiceVolume.value) / 100;
     activeAudio.play();
   } catch (error) {
     console.error(error);
@@ -325,6 +364,8 @@ function tick() {
 
   if (phaseSecondsLeft <= 0 && sessionSecondsLeft > 0) {
     advancePhase();
+  } else if (sessionSecondsLeft > 0) {
+    speakPhase(phases[phaseIndex]);
   }
 
   if (sessionSecondsLeft <= 0) {
@@ -343,6 +384,7 @@ function startSession() {
   isRunning = true;
   updateDisplay();
   syncAmbientSound();
+  warmSpeechCache();
   speakPhase(phases[phaseIndex]);
   timerId = window.setInterval(tick, 1000);
 }
@@ -361,6 +403,11 @@ sessionMinutes.addEventListener("change", () => {
 });
 
 ambientSound.addEventListener("change", syncAmbientSound);
+ambientVolume.addEventListener("input", () => {
+  if (ambientMasterGain) {
+    ambientMasterGain.gain.value = Number(ambientVolume.value) / 100;
+  }
+});
 startButton.addEventListener("click", startSession);
 pauseButton.addEventListener("click", () => stopSession(false));
 resetButton.addEventListener("click", () => stopSession(true));
