@@ -31,7 +31,11 @@ let ambientNodes = [];
 let ambientIntervals = [];
 let currentAmbient = "none";
 let ambientMasterGain = null;
-const speechWarmupPhrases = ["In", "Hold", "Out", "2", "3", "4", "5", "6", "7", "8"];
+const phaseSpeech = [
+  { text: "In, 2, 3, 4", duration: 4 },
+  { text: "Hold, 2, 3, 4, 5, 6, 7", duration: 7 },
+  { text: "Out, 2, 3, 4, 5, 6, 7, 8", duration: 8 },
+];
 
 function getAmbientContext() {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -258,9 +262,10 @@ function playFallbackTone(phase) {
   oscillator.stop(now + 0.35);
 }
 
-async function fetchSpeech(text) {
-  if (speechCache.has(text)) {
-    return speechCache.get(text);
+async function fetchSpeech(text, duration) {
+  const cacheKey = `${text}|${duration}`;
+  if (speechCache.has(cacheKey)) {
+    return speechCache.get(cacheKey);
   }
 
   const response = await fetch("/api/speak", {
@@ -268,7 +273,7 @@ async function fetchSpeech(text) {
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, duration }),
   });
 
   if (!response.ok) {
@@ -277,21 +282,12 @@ async function fetchSpeech(text) {
 
   const audioBlob = await response.blob();
   const audioUrl = URL.createObjectURL(audioBlob);
-  speechCache.set(text, audioUrl);
+  speechCache.set(cacheKey, audioUrl);
   return audioUrl;
 }
 
-function getPhaseCountCue(phase) {
-  const elapsedSeconds = phase.duration - phaseSecondsLeft;
-  if (elapsedSeconds <= 0) {
-    return phase.label;
-  }
-
-  return String(elapsedSeconds + 1);
-}
-
 function warmSpeechCache() {
-  Promise.allSettled(speechWarmupPhrases.map((phrase) => fetchSpeech(phrase)));
+  Promise.allSettled(phaseSpeech.map((phase) => fetchSpeech(phase.text, phase.duration)));
 }
 
 async function speakPhase(phase) {
@@ -300,8 +296,8 @@ async function speakPhase(phase) {
   }
 
   try {
-    const cue = getPhaseCountCue(phase);
-    const audioUrl = await fetchSpeech(cue);
+    const cue = phaseSpeech[phaseIndex];
+    const audioUrl = await fetchSpeech(cue.text, cue.duration);
 
     if (activeAudio) {
       activeAudio.pause();
@@ -364,8 +360,6 @@ function tick() {
 
   if (phaseSecondsLeft <= 0 && sessionSecondsLeft > 0) {
     advancePhase();
-  } else if (sessionSecondsLeft > 0) {
-    speakPhase(phases[phaseIndex]);
   }
 
   if (sessionSecondsLeft <= 0) {

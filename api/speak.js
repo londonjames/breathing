@@ -14,6 +14,7 @@ module.exports = async function handler(req, res) {
   }
 
   const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
+  const duration = Number(req.body?.duration);
   if (!text) {
     res.statusCode = 400;
     res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -30,9 +31,9 @@ module.exports = async function handler(req, res) {
       },
       body: JSON.stringify({
         model: "gpt-4o-mini-tts",
-        voice: "coral",
+        voice: "shimmer",
         format: "mp3",
-        instructions: "Speak calmly with a gentle English accent for a meditation breathing exercise.",
+        instructions: `Speak in a calm, gentle British English voice for a children's breathing exercise. Use even pacing, soft volume, and steady timing. Say the full phrase naturally across about ${duration || 4} seconds total. Do not rush the higher numbers. Do not add drama or emphasis.`,
         input: text,
       }),
     });
