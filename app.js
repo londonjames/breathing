@@ -10,6 +10,7 @@ const phaseRemaining = document.getElementById("phaseRemaining");
 const sessionRemaining = document.getElementById("sessionRemaining");
 const sessionMinutes = document.getElementById("sessionMinutes");
 const ambientSound = document.getElementById("ambientSound");
+const voiceMode = document.getElementById("voiceMode");
 const voiceVolume = document.getElementById("voiceVolume");
 const ambientVolume = document.getElementById("ambientVolume");
 const startButton = document.getElementById("startButton");
@@ -36,6 +37,11 @@ const phaseSpeech = [
   { text: "Hold, 2, 3, 4, 5, 6, 7", duration: 7 },
   { text: "Out, 2, 3, 4, 5, 6, 7, 8", duration: 8 },
 ];
+const recordedVoiceByState = {
+  in: "/audio/in-voice.m4a",
+  hold: "/audio/hold-voice.m4a",
+  out: "/audio/out-voice.m4a",
+};
 
 function getAmbientContext() {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -290,20 +296,35 @@ function warmSpeechCache() {
   Promise.allSettled(phaseSpeech.map((phase) => fetchSpeech(phase.text, phase.duration)));
 }
 
+function stopActiveVoice() {
+  if (!activeAudio) {
+    return;
+  }
+
+  activeAudio.pause();
+  activeAudio.currentTime = 0;
+}
+
 async function speakPhase(phase) {
   if (!soundEnabled.checked) {
+    return;
+  }
+
+  stopActiveVoice();
+
+  if (voiceMode.value === "dad") {
+    activeAudio = new Audio(recordedVoiceByState[phase.state]);
+    activeAudio.volume = Number(voiceVolume.value) / 100;
+    activeAudio.play().catch((error) => {
+      console.error(error);
+      playFallbackTone(phase);
+    });
     return;
   }
 
   try {
     const cue = phaseSpeech[phaseIndex];
     const audioUrl = await fetchSpeech(cue.text, cue.duration);
-
-    if (activeAudio) {
-      activeAudio.pause();
-      activeAudio.currentTime = 0;
-    }
-
     activeAudio = new Audio(audioUrl);
     activeAudio.volume = Number(voiceVolume.value) / 100;
     activeAudio.play();
@@ -339,6 +360,7 @@ function stopSession(resetClock = false) {
   timerId = null;
   isRunning = false;
   clearAmbient();
+  stopActiveVoice();
 
   if (resetClock) {
     phaseIndex = 0;
@@ -397,9 +419,19 @@ sessionMinutes.addEventListener("change", () => {
 });
 
 ambientSound.addEventListener("change", syncAmbientSound);
+voiceMode.addEventListener("change", () => {
+  if (voiceMode.value === "ai") {
+    warmSpeechCache();
+  }
+});
 ambientVolume.addEventListener("input", () => {
   if (ambientMasterGain) {
     ambientMasterGain.gain.value = Number(ambientVolume.value) / 100;
+  }
+});
+voiceVolume.addEventListener("input", () => {
+  if (activeAudio) {
+    activeAudio.volume = Number(voiceVolume.value) / 100;
   }
 });
 startButton.addEventListener("click", startSession);
