@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>4/7/8 Breathing</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section class="panel">
+        <p class="eyebrow">Breathing Session</p>
+        <h1>4 / 7 / 8</h1>
+        <div class="breath-visual" data-state="in">
+          <div class="ring"></div>
+          <div class="ring ring-secondary"></div>
+          <div class="cue-wrap">
+            <p class="cue-label" id="cueLabel">In</p>
+            <p class="cue-count" id="cueCount">4</p>
+          </div>
+        </div>
+
+        <div class="timers">
+          <div>
+            <span class="timer-label">Session left</span>
+            <span class="timer-value" id="sessionRemaining">05:00</span>
+          </div>
+          <div>
+            <span class="timer-label">Current phase</span>
+            <span class="timer-value" id="phaseRemaining">00:04</span>
+          </div>
+        </div>
+
+        <label class="field" for="sessionMinutes">
+          <span>Session length</span>
+          <select id="sessionMinutes">
+            <option value="1">1 minute</option>
+            <option value="3">3 minutes</option>
+            <option value="5" selected>5 minutes</option>
+            <option value="10">10 minutes</option>
+            <option value="15">15 minutes</option>
+          </select>
+        </label>
+
+        <label class="field" for="ambientSound">
+          <span>Background sound</span>
+          <select id="ambientSound">
+            <option value="none" selected>None</option>
+            <option value="waves">Waves</option>
+            <option value="forest">Forest</option>
+            <option value="rain">Rain</option>
+            <option value="night">Night</option>
+          </select>
+        </label>
+
+        <div class="controls">
+          <button id="startButton" class="primary">Start</button>
+          <button id="pauseButton">Pause</button>
+          <button id="resetButton">Reset</button>
+        </div>
+
+        <label class="sound-toggle">
+          <input type="checkbox" id="soundEnabled" checked />
+          <span>Sound cues</span>
+        </label>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
